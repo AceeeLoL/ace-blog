@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title, excerpt, content, category, mood, readTime, pinned } = body;
+    const { title, excerpt, content, category, pinned } = body;
 
     if (!title || !content) {
       return NextResponse.json({ error: 'Title and content are required' }, { status: 400 });
@@ -33,8 +33,6 @@ export async function POST(req: NextRequest) {
       content,
       date: new Date().toISOString(),
       category: category || 'Reflections',
-      readTime: readTime || `${Math.max(1, Math.ceil(content.split(' ').length / 150))} min read`,
-      mood: mood || { emoji: '☕', label: 'Cozy' },
       pinned: !!pinned,
     });
 

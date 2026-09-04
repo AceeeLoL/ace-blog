@@ -16,12 +16,11 @@ export async function getDiaryEntries(): Promise<DiaryEntry[]> {
 }
 
 export async function createDiaryEntry(
-  entryData: Omit<DiaryEntry, 'id' | 'reactions'>
+  entryData: Omit<DiaryEntry, 'id'>
 ): Promise<DiaryEntry> {
   const newEntry = {
     ...entryData,
     id: `entry-${Date.now()}`,
-    reactions: { loved: 0, cozy: 0, thoughtful: 0, spark: 0 },
   };
 
   const { error } = await getSupabase().from('entries').insert(newEntry);
@@ -42,37 +41,6 @@ export async function deleteDiaryEntry(id: string): Promise<boolean> {
     return false;
   }
   return true;
-}
-
-export async function incrementReaction(
-  entryId: string,
-  reactionType: 'loved' | 'cozy' | 'thoughtful' | 'spark'
-): Promise<DiaryEntry | null> {
-  const { data: entry, error: fetchError } = await getSupabase()
-    .from('entries')
-    .select('*')
-    .eq('id', entryId)
-    .single();
-
-  if (fetchError || !entry) {
-    console.error('Error fetching entry for reaction:', fetchError);
-    return null;
-  }
-
-  const reactions = entry.reactions || { loved: 0, cozy: 0, thoughtful: 0, spark: 0 };
-  reactions[reactionType] = (reactions[reactionType] || 0) + 1;
-
-  const { error: updateError } = await getSupabase()
-    .from('entries')
-    .update({ reactions })
-    .eq('id', entryId);
-
-  if (updateError) {
-    console.error('Error updating reaction:', updateError);
-    return null;
-  }
-
-  return { ...entry, reactions };
 }
 
 export async function getVisitorQuestions(): Promise<VisitorQuestion[]> {
