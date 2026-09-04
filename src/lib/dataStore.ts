@@ -1,8 +1,8 @@
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import { DiaryEntry, VisitorQuestion } from '@/types';
 
 export async function getDiaryEntries(): Promise<DiaryEntry[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('entries')
     .select('*')
     .order('pinned', { ascending: false })
@@ -24,7 +24,7 @@ export async function createDiaryEntry(
     reactions: { loved: 0, cozy: 0, thoughtful: 0, spark: 0 },
   };
 
-  const { error } = await supabase.from('entries').insert(newEntry);
+  const { error } = await getSupabase().from('entries').insert(newEntry);
   if (error) {
     console.error('Error creating entry:', error);
   }
@@ -32,7 +32,7 @@ export async function createDiaryEntry(
 }
 
 export async function deleteDiaryEntry(id: string): Promise<boolean> {
-  const { error, count } = await supabase
+  const { error, count } = await getSupabase()
     .from('entries')
     .delete()
     .eq('id', id);
@@ -48,7 +48,7 @@ export async function incrementReaction(
   entryId: string,
   reactionType: 'loved' | 'cozy' | 'thoughtful' | 'spark'
 ): Promise<DiaryEntry | null> {
-  const { data: entry, error: fetchError } = await supabase
+  const { data: entry, error: fetchError } = await getSupabase()
     .from('entries')
     .select('*')
     .eq('id', entryId)
@@ -62,7 +62,7 @@ export async function incrementReaction(
   const reactions = entry.reactions || { loved: 0, cozy: 0, thoughtful: 0, spark: 0 };
   reactions[reactionType] = (reactions[reactionType] || 0) + 1;
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await getSupabase()
     .from('entries')
     .update({ reactions })
     .eq('id', entryId);
@@ -78,7 +78,7 @@ export async function incrementReaction(
 export async function getVisitorQuestions(): Promise<VisitorQuestion[]> {
   const nowISO = new Date().toISOString();
 
-  const { data: allQuestions, error: fetchError } = await supabase
+  const { data: allQuestions, error: fetchError } = await getSupabase()
     .from('questions')
     .select('*');
 
@@ -99,7 +99,7 @@ export async function getVisitorQuestions(): Promise<VisitorQuestion[]> {
     .map((q) => q.id);
 
   if (expiredIds.length > 0) {
-    await supabase.from('questions').delete().in('id', expiredIds);
+    await getSupabase().from('questions').delete().in('id', expiredIds);
   }
 
   return activeQuestions.sort(
@@ -129,7 +129,7 @@ export async function createVisitorQuestion(
     visitorId: visitorId || undefined,
   };
 
-  const { error } = await supabase.from('questions').insert(newQuestion);
+  const { error } = await getSupabase().from('questions').insert(newQuestion);
   if (error) {
     console.error('Error creating question:', error);
   }
@@ -140,7 +140,7 @@ export async function replyToQuestion(
   id: string,
   replyText: string
 ): Promise<VisitorQuestion | null> {
-  const { data: question, error: fetchError } = await supabase
+  const { data: question, error: fetchError } = await getSupabase()
     .from('questions')
     .select('*')
     .eq('id', id)
@@ -151,7 +151,7 @@ export async function replyToQuestion(
     return null;
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await getSupabase()
     .from('questions')
     .update({
       adminReply: replyText,
@@ -172,7 +172,7 @@ export async function visitorSelfReply(
   replyText: string,
   visitorId: string
 ): Promise<VisitorQuestion | null> {
-  const { data: question, error: fetchError } = await supabase
+  const { data: question, error: fetchError } = await getSupabase()
     .from('questions')
     .select('*')
     .eq('id', id)
@@ -187,7 +187,7 @@ export async function visitorSelfReply(
     return null;
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await getSupabase()
     .from('questions')
     .update({
       visitorReply: replyText,
@@ -204,7 +204,7 @@ export async function visitorSelfReply(
 }
 
 export async function deleteVisitorQuestion(id: string): Promise<boolean> {
-  const { error } = await supabase.from('questions').delete().eq('id', id);
+  const { error } = await getSupabase().from('questions').delete().eq('id', id);
 
   if (error) {
     console.error('Error deleting question:', error);
