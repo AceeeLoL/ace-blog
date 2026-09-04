@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Shield, Infinity, Timer, CornerDownRight } from 'lucide-react';
+import { Send, Shield, Infinity, Timer, CornerDownRight, Eye, EyeOff } from 'lucide-react';
 import { VisitorQuestion } from '@/types';
 import { timeAgo } from '@/lib/utils';
 
@@ -22,6 +22,11 @@ export default function AskPage() {
   const [visitorReplyText, setVisitorReplyText] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPw, setShowAdminPw] = useState(false);
+  const [adminLoginError, setAdminLoginError] = useState('');
+  const [adminLoggingIn, setAdminLoggingIn] = useState(false);
   const [visitorId, setVisitorId] = useState<string>('');
 
   useEffect(() => {
@@ -58,6 +63,36 @@ export default function AskPage() {
     fetchQuestions();
     checkAdmin();
   }, []);
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminLoggingIn(true);
+    setAdminLoginError('');
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: adminPassword }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsAdmin(true);
+        setShowAdminLogin(false);
+        setAdminPassword('');
+      } else {
+        setAdminLoginError('Invalid password.');
+      }
+    } catch {
+      setAdminLoginError('Something went wrong.');
+    } finally {
+      setAdminLoggingIn(false);
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    await fetch('/api/auth', { method: 'DELETE' });
+    setIsAdmin(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,12 +172,66 @@ export default function AskPage() {
               <p className="text-[var(--text-secondary)] text-sm">
                 Leave a note, ask a question, or just say hello.
               </p>
-              <button
-                onClick={() => setShowForm(!showForm)}
-                className="text-sm text-[var(--accent-terracotta)] hover:text-[var(--accent-terracotta)]/80 font-medium transition-colors"
-              >
-                {showForm ? 'Cancel' : 'Leave a note'}
-              </button>
+              <div className="flex items-center gap-3">
+                {isAdmin ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[var(--accent-olive)] font-medium flex items-center gap-1">
+                      <Shield size={12} /> Admin
+                    </span>
+                    <button
+                      onClick={handleAdminLogout}
+                      className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                ) : showAdminLogin ? (
+                  <div className="flex flex-col items-end gap-1">
+                    <form onSubmit={handleAdminLogin} className="flex items-center gap-2">
+                      <div className="relative">
+                        <input
+                          type={showAdminPw ? 'text' : 'password'}
+                          placeholder="Admin password"
+                          value={adminPassword}
+                          onChange={(e) => setAdminPassword(e.target.value)}
+                          className="w-36 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-lg px-3 py-1.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/40 focus:outline-none focus:border-[var(--accent-terracotta)] pr-7"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminPw(!showAdminPw)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
+                        >
+                          {showAdminPw ? <EyeOff size={10} /> : <Eye size={10} />}
+                        </button>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={!adminPassword.trim() || adminLoggingIn}
+                        className="px-3 py-1.5 text-xs font-medium bg-[var(--accent-terracotta)] text-white rounded-lg disabled:opacity-40"
+                      >
+                        {adminLoggingIn ? '...' : 'Login'}
+                      </button>
+                    </form>
+                    {adminLoginError && (
+                      <p className="text-red-500 text-[11px]">{adminLoginError}</p>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowAdminLogin(true)}
+                    className="text-xs text-[var(--text-secondary)] hover:text-[var(--accent-terracotta)] transition-colors flex items-center gap-1"
+                  >
+                    <Shield size={12} /> Admin
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowForm(!showForm)}
+                  className="text-sm text-[var(--accent-terracotta)] hover:text-[var(--accent-terracotta)]/80 font-medium transition-colors"
+                >
+                  {showForm ? 'Cancel' : 'Leave a note'}
+                </button>
+              </div>
             </div>
 
             <AnimatePresence>
