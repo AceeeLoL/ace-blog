@@ -14,6 +14,7 @@ export default function BlogPage() {
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<DiaryEntry | null>(null);
+  const [editingEntry, setEditingEntry] = useState<DiaryEntry | null>(null);
   const [showWriter, setShowWriter] = useState(false);
   const [filter, setFilter] = useState('all');
 
@@ -37,6 +38,7 @@ export default function BlogPage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'A') {
         e.preventDefault();
+        setEditingEntry(null);
         setShowWriter(true);
       }
     };
@@ -127,14 +129,26 @@ export default function BlogPage() {
       <EntryModal
         entry={selectedEntry}
         onClose={() => setSelectedEntry(null)}
+        onEdit={(entry) => {
+          setEditingEntry(entry);
+          setShowWriter(true);
+        }}
+        onDelete={() => {
+          fetchEntries();
+        }}
       />
 
       <AdminWriter
         isOpen={showWriter}
-        onClose={() => setShowWriter(false)}
+        editingEntry={editingEntry}
+        onClose={() => {
+          setShowWriter(false);
+          setEditingEntry(null);
+        }}
         onEntryCreated={() => {
           fetchEntries();
           setShowWriter(false);
+          setEditingEntry(null);
         }}
       />
     </div>

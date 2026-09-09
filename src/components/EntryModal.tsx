@@ -1,16 +1,30 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar } from 'lucide-react';
+import { X, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { DiaryEntry } from '@/types';
 import { formatDate } from '@/lib/utils';
 
 type EntryModalProps = {
   entry: DiaryEntry | null;
   onClose: () => void;
+  onEdit?: (entry: DiaryEntry) => void;
+  onDelete?: (id: string) => void;
 };
 
-export default function EntryModal({ entry, onClose }: EntryModalProps) {
+export default function EntryModal({ entry, onClose, onEdit, onDelete }: EntryModalProps) {
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (entry) {
+      fetch('/api/auth')
+        .then((res) => res.json())
+        .then((data) => setIsAdmin(data.isAdmin))
+        .catch(() => setIsAdmin(false));
+    }
+  }, [entry]);
+
   if (!entry) return null;
 
   const renderContent = (content: string) => {
@@ -159,12 +173,45 @@ export default function EntryModal({ entry, onClose }: EntryModalProps) {
           className="w-full max-w-2xl bg-[var(--card-bg)] rounded-xl shadow-xl border border-[var(--card-border)] overflow-hidden relative"
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 z-10 w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-all"
-          >
-            <X size={16} />
-          </button>
+          <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+            {isAdmin && onEdit && (
+              <button
+                onClick={() => {
+                  onEdit(entry);
+                  onClose();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-[var(--accent-terracotta)]/10 text-[var(--accent-terracotta)] hover:bg-[var(--accent-terracotta)]/20 transition-all"
+                title="Edit entry"
+              >
+                <Pencil size={13} />
+                Edit
+              </button>
+            )}
+            {isAdmin && onDelete && (
+              <button
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to delete this entry?')) {
+                    const res = await fetch(`/api/entries/${entry.id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                      onDelete(entry.id);
+                      onClose();
+                    }
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all"
+                title="Delete entry"
+              >
+                <Trash2 size={13} />
+                Delete
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-all"
+            >
+              <X size={16} />
+            </button>
+          </div>
 
           <div className="px-5 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6 border-b border-[var(--card-border)]">
             <div className="flex items-center gap-2 sm:gap-3 text-xs text-[var(--text-secondary)] mb-3 sm:mb-4 flex-wrap">

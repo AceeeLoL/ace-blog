@@ -30,6 +30,24 @@ export async function createDiaryEntry(
   return newEntry;
 }
 
+export async function updateDiaryEntry(
+  id: string,
+  entryData: Partial<Omit<DiaryEntry, 'id'>>
+): Promise<DiaryEntry | null> {
+  const { data, error } = await getSupabase()
+    .from('entries')
+    .update(entryData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating entry:', error);
+    return null;
+  }
+  return data;
+}
+
 export async function deleteDiaryEntry(id: string): Promise<boolean> {
   const { error, count } = await getSupabase()
     .from('entries')

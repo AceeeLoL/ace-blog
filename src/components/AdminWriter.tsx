@@ -1,18 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Send, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Send, Eye, EyeOff, Save } from 'lucide-react';
+import { DiaryEntry } from '@/types';
 
 type AdminWriterProps = {
   isOpen: boolean;
   onClose: () => void;
   onEntryCreated: () => void;
+  editingEntry?: DiaryEntry | null;
 };
 
 const SUGGESTED_PINS = ['Reflections', 'Life', 'Dev Log', 'Thoughts', 'Travel'];
 
-export default function AdminWriter({ isOpen, onClose, onEntryCreated }: AdminWriterProps) {
+export default function AdminWriter({ isOpen, onClose, onEntryCreated, editingEntry }: AdminWriterProps) {
   const [showLogin, setShowLogin] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -22,6 +25,38 @@ export default function AdminWriter({ isOpen, onClose, onEntryCreated }: AdminWr
   const [pinName, setPinName] = useState('Reflections');
   const [content, setContent] = useState('');
   const [publishing, setPublishing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCheckingAuth(true);
+      // Check if admin is already logged in
+      fetch('/api/auth')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.isAdmin) {
+            setShowLogin(false);
+          } else {
+            setShowLogin(true);
+          }
+        })
+        .catch(() => {
+          setShowLogin(true);
+        })
+        .finally(() => {
+          setCheckingAuth(false);
+        });
+
+      if (editingEntry) {
+        setTitle(editingEntry.title || '');
+        setPinName(editingEntry.category || 'Reflections');
+        setContent(editingEntry.content || '');
+      } else {
+        setTitle('');
+        setPinName('Reflections');
+        setContent('');
+      }
+    }
+  }, [isOpen, editingEntry]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,8 +85,12 @@ export default function AdminWriter({ isOpen, onClose, onEntryCreated }: AdminWr
     if (!title.trim() || !content.trim()) return;
     setPublishing(true);
     try {
-      const res = await fetch('/api/entries', {
-        method: 'POST',
+      const isEditing = !!editingEntry;
+      const url = isEditing ? `/api/entries/${editingEntry.id}` : '/api/entries';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -59,6 +98,7 @@ export default function AdminWriter({ isOpen, onClose, onEntryCreated }: AdminWr
           title: title.trim(),
           content: content.trim(),
           category: pinName.trim() || 'General',
+          ...(isEditing && editingEntry?.pinned !== undefined ? { pinned: editingEntry.pinned } : {}),
         }),
       });
       if (res.ok) {
@@ -69,7 +109,7 @@ export default function AdminWriter({ isOpen, onClose, onEntryCreated }: AdminWr
         onEntryCreated();
       }
     } catch (err) {
-      console.error('Publish failed', err);
+      console.error('Publish/Update failed', err);
     } finally {
       setPublishing(false);
     }
@@ -100,7 +140,11 @@ export default function AdminWriter({ isOpen, onClose, onEntryCreated }: AdminWr
           <X size={16} />
         </button>
 
-        {showLogin ? (
+        {checkingAuth ? (
+          <div className="p-12 text-center">
+            <div className="w-6 h-6 border-2 border-[var(--accent-terracotta)]/30 border-t-[var(--accent-terracotta)] rounded-full animate-spin mx-auto" />
+          </div>
+        ) : showLogin ? (
           <div className="p-6 sm:p-8 text-center">
             <h2 className="font-serif text-lg sm:text-xl font-bold text-[var(--text-primary)] mb-1">
               Admin Access
@@ -144,7 +188,7 @@ export default function AdminWriter({ isOpen, onClose, onEntryCreated }: AdminWr
         ) : (
           <div className="p-5 sm:p-8">
             <h2 className="font-serif text-lg sm:text-xl font-bold text-[var(--text-primary)] mb-4 sm:mb-6">
-              New Blog Entry
+              {editingEntry ? 'Edit Blog Entry' : 'New Blog Entry'}
             </h2>
 
             <div className="space-y-4">
@@ -216,8 +260,8 @@ export default function AdminWriter({ isOpen, onClose, onEntryCreated }: AdminWr
                   disabled={!title.trim() || !content.trim() || publishing}
                   className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[var(--accent-terracotta)] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                 >
-                  <Send size={14} />
-                  {publishing ? 'Publishing...' : 'Publish'}
+                  {editingEntry ? <Save size={14} /> : <Send size={14} />}
+                  {publishing ? (editingEntry ? 'Saving...' : 'Publishing...') : (editingEntry ? 'Save Changes' : 'Publish')}
                 </button>
               </div>
             </div>
